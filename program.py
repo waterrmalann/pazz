@@ -138,7 +138,7 @@ def main():
         DATABASE.commit()
         print("New Master Password Set.\n")
         
-    mpass = input("  Enter Master Password: ")
+    mpass = input_required("  Enter Master Password: ", "{ERROR} Input a valid password.\n")
     
     # Verify master password.
     mpass_hashed = hash_SHA256(mpass)
