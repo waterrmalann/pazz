@@ -58,23 +58,28 @@ def decrypt_AES(text, key):
     cipher = AES.new(key, AES.MODE_CFB, key[::-1][:16])
     return cipher.decrypt(base64.b64decode(text)).decode()
 
-# Utility functions to manage the windows console.
+# Utility functions to manage the terminal.
 def cls():
     """Clear the console screen."""
-    os.system('cls')
-
-def color(clr):
-    """Set the console text color."""
-    os.system(f'color {clr}')
+    if os.name == 'nt':
+        os.system('cls')
+    else:
+        os.system('clear')
 
 def title(text):
     """Set the console window title."""
-    os.system(f'title {text}')
-
+    if os.name == 'nt':
+        os.system(f'title {text}')
+    else:
+        print(f'\33]0;{text}\a', end='', flush=True)
+    
 def pause(message):
     """Pause the console window and await keyboard input."""
     print(message)
-    os.system('pause>nul')
+    if os.name == 'nt':
+        os.system('pause>nul')
+    else:
+        os.system(f'read -p "{message}"') # untested
 
 def print_header():
     """Print a large fancy heading text."""
@@ -111,7 +116,6 @@ def safeExit():
 def main():
     """Driver function to enter the application."""
     cls()
-    color('f')
     title("Pazz ^| Authorization")
     print("=====================================================")
     print("=====================================================")
@@ -151,7 +155,6 @@ def main():
 
 def menu_showMain():
     cls()
-    color('f')
     title("Pazz ^| Main")
     print_header()
     print()
@@ -184,7 +187,6 @@ def menu_showMain():
             
 def menu_showList():
     cls()
-    color('f')
     title("Pazz ^| List Entries")
     print()
     print(r"  ╦  ╦╔═╗╔╦╗")
@@ -231,7 +233,6 @@ def menu_showList():
             
 def menu_showAdd():
     cls()
-    color('f')
     title("Pazz ^| Add Entry")
     print()
     print(r"  ╔═╗╔╦╗╔╦╗")
@@ -266,7 +267,6 @@ def menu_showAdd():
     
 def menu_showEdit():
     cls()
-    color('f')
     title("Pazz ^| Edit Entry")
     print()
     print(r"  ╔═╗╔╦╗╦╔╦╗")
@@ -348,7 +348,6 @@ def menu_showEdit():
 
 def menu_showDelete():
     cls()
-    color('f')
     title("Pazz ^| Delete Entry")
     print()
     print(r"  ╔╦╗╔═╗╦  ╔═╗╔╦╗╔═╗")
@@ -388,7 +387,6 @@ def menu_showDelete():
 
 def menu_showAbout():
     cls()
-    color('f')
     title("Pazz ^| About")
     print()
     print(r"  ╔═╗╔╗ ╔═╗╦ ╦╔╦╗")
