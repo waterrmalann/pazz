@@ -510,7 +510,7 @@ def menu_showAbout():
     print(r"  ───────────────")
     print()
     
-    print("  Pazz ^| by waterrmalann")
+    print("  Pazz | by waterrmalann")
     print("  A simple cli-based password manager written in Python using SQLite.")
     print("  Version 1.0 (2022)")
     print()
