@@ -9,11 +9,12 @@ import pyperclip
 from Crypto.Hash import SHA256
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import bcrypt
-from Crypto.Random import get_random_bytes
+from Crypto.Random import get_random_bytes, random
 import base64
+import string
 
 # Connect to local database and retrieve cursor.
-DATABASE = sqlite3.connect("passwordDatabase.db")
+DATABASE = sqlite3.connect("data/passwordDatabase.db")
 DB_CURSOR = DATABASE.cursor()
 
 # Check if entries table is already defined.
@@ -32,9 +33,15 @@ if len(result) == 0:
     DB_CURSOR.execute("INSERT INTO config VALUES(?, ?)", ('masterPassword', ''))
     DATABASE.commit()
 
+# Read passphrases into list
+def get_lines(f):
+    return [line.strip() for line in f.readlines() if line.strip()]
+
 # Global Variables          
 MASTER_PASS = ''
-
+with open("data/passphrases.txt") as f:
+    PASSPHRASES = get_lines(f)
+    
 # Utility functions to hash, encrypt, and decrypt passwords.
 def hash_SHA256(text):
     """Hash an input string using the SHA-256 hashing algorithm."""
@@ -61,15 +68,30 @@ def decrypt_AES(text, key):
 # Utility functions to generate strong, secure passwords
 def genpwd_RSM(length):
     """Generates random string passwords."""
-    return 'NotImplemented'
-
+    alpha = string.ascii_lowercase
+    alpha_upper = string.ascii_uppercase
+    digits = string.digits
+    symbols = '-+_!@#$%^&*.,?]'
+    
+    r = divmod(length, 4)
+    
+    string = []
+    string += random.sample(alpha, k=r[0])
+    string += random.sample(alpha_upper, k=r[0])
+    string += random.sample(digits, k=r[0])
+    string += random.sample(symbols, k=r[0])
+    string += random.sample(alpha + alpha_upper + digits + symbols, k=r[1]) # remainder
+    random.shuffle(string)
+    
+    return ''.join(string)
+    
 def genpwd_PP(length):
     """Generates passphrases."""
-    return 'NotImplemented'
+    return ' '.join(random.sample(PASSPHRASES, k=length))
     
 def genpwd_GPW(length):
     """Generates pronouncable pseudoword passwords."""
-    return 'NotImplemented'
+    return generatePronouncable(length)
 
 # Utility functions to manage the terminal.
 def cls():
@@ -274,6 +296,8 @@ def menu_showAdd():
         "Enter Password (Confirmation): ",
         "{ERROR} Password Mismatch. Enter Again.\n"
     )
+    if entry_password == 'clip':
+        entry_password = pyperclip.paste().strip() or entry_password
     entry_notes = input("Additional Notes: ")
     last_modified = str(time.time())
     
@@ -339,6 +363,8 @@ def menu_showEdit():
                         break
                     else:
                         print("{ERROR} Password Mismatch. Enter Again.\n")
+                if new_password == 'clip':
+                    new_password = pyperclip.paste().strip() or new_password
                 
                 print("\nNotes:", entry_data[4])
                 new_notes = input("Notes (New):").strip()
@@ -437,6 +463,7 @@ def menu_showGenerator():
             pwd = genpwd_RSM(length_s)
             pyperclip.copy(pwd)
             print("Generated random string password has been copied to clipboard.")
+            break
             
         elif ch in {'2', 'xkcd', 'passphrase', 'pp'}:
             # passphrase
@@ -445,6 +472,7 @@ def menu_showGenerator():
             pwd = genpwd_PP(length_pp)
             pyperclip.copy(pwd)
             print("Generated passphrase has been copied to clipboard.")
+            break
             
         elif ch in {'3', 'pseudoword', 'pswd', 'gpw', 'pw'}:
             # pseudoword
@@ -453,6 +481,7 @@ def menu_showGenerator():
             pwd = genpwd_GPW(length_pw)
             pyperclip.copy(pwd)
             print("Generated pseudoword password has been copied to clipboard.")
+            break
             
         elif ch in {'4', 'pseudoword+passphrase', 'pswdxkcd', 'pwpp'}:
             # pseudoword + passphrase
@@ -462,12 +491,15 @@ def menu_showGenerator():
             pwd = ' '.join([genpwd_GPW(length_pw) for i in range(length_pp])
             pyperclip.copy(pwd)
             print("Generated pseudoword passphrase has been copied to clipboard.")
+            break
             
         elif ch in {'5', 'back', 'b'}:
             return menu_showMain()
         else:
-            print("{ERROR} Invalid Option. Try Again. [1/2/3/4/5]")
-            print()
+            print("{ERROR} Invalid Option. Try Again. [1/2/3/4/5]\n")
+    
+    pause("\n << Back [press any key]")
+    menu_showMain()
 
 def menu_showAbout():
     cls()
