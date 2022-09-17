@@ -15,6 +15,7 @@ A cli-based password manager and generator written in Python using SQLite for da
 
 - Add, edit, delete, and list password entries.
 - AES-256 encrypted storage of passwords.
+- Generation of extremely secure passwords using 4 available generators.
 - Copy to/from clipboard.
 - SQL based local storage using SQLite.
 
@@ -55,7 +56,8 @@ python program.py
 - Menu for changing master password.
 - Ability to keep multiple profiles with separate databases.
 - Automatically check passwords against database breaches. 
-- Strong password generator and strength checker.
+- Password strength checker.
+- ~~Strong password generator.~~
 - Follow best practices and make everything more secure.
 
 ### ⚠️ Word of Warning
