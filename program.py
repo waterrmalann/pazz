@@ -4,16 +4,18 @@ import sqlite3
 import time
 import random
 import pyperclip
+import string
 
 ## Hashing, Encoding, & Encryption.
 from Crypto.Hash import SHA256
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import bcrypt
-from Crypto.Random import get_random_bytes
+from Crypto.Random import get_random_bytes, random
 import base64
+from gpw import generatePronouncable
 
 # Connect to local database and retrieve cursor.
-DATABASE = sqlite3.connect("passwordDatabase.db")
+DATABASE = sqlite3.connect("data/passwordDatabase.db")
 DB_CURSOR = DATABASE.cursor()
 
 # Check if entries table is already defined.
@@ -34,7 +36,9 @@ if len(result) == 0:
 
 # Global Variables          
 MASTER_PASS = ''
-
+with open("data/wordlist.txt") as f:
+    PASSPHRASES = [line.strip() for line in f.readlines() if line.strip()]
+    
 # Utility functions to hash, encrypt, and decrypt passwords.
 def hash_SHA256(text):
     """Hash an input string using the SHA-256 hashing algorithm."""
@@ -57,6 +61,34 @@ def decrypt_AES(text, key):
     # Warning: Insecure Implementation
     cipher = AES.new(key, AES.MODE_CFB, key[::-1][:16])
     return cipher.decrypt(base64.b64decode(text)).decode()
+
+# Utility functions to generate strong, secure passwords
+def genpwd_RSM(length):
+    """Generates random string passwords."""
+    alpha = string.ascii_lowercase
+    alpha_upper = string.ascii_uppercase
+    digits = string.digits
+    symbols = '-+_!@#$%^&*.,?]'
+    
+    r = divmod(length, 4)
+    
+    gen_string = []
+    gen_string += random.sample(alpha, k=r[0])
+    gen_string += random.sample(alpha_upper, k=r[0])
+    gen_string += random.sample(digits, k=r[0])
+    gen_string += random.sample(symbols, k=r[0])
+    gen_string += random.sample(alpha + alpha_upper + digits + symbols, k=r[1]) # remainder
+    random.shuffle(gen_string)
+    
+    return ''.join(gen_string)
+    
+def genpwd_PP(length):
+    """Generates passphrases."""
+    return ' '.join(random.sample(PASSPHRASES, k=length))
+    
+def genpwd_GPW(length):
+    """Generates pronouncable pseudoword passwords."""
+    return generatePronouncable(length)
 
 # Utility functions to manage the terminal.
 def cls():
@@ -108,6 +140,18 @@ def input_required(prompt, error):
            return entry
         else:
             print(error)
+
+def input_integer(prompt, error, minmax=None, default=None):
+    while True:
+        entry = input(prompt).strip()
+        if entry.isdigit():
+            num = int(entry)
+            if minmax is not None:
+                if num >= minmax[0] and num <= minmax[1]:
+                    return num
+        elif not entry and default is not None:
+            return default
+        print(error)
 
 def safeExit():
     DATABASE.close()
@@ -162,8 +206,9 @@ def menu_showMain():
     print("  2] Add Entry")
     print("  3] Edit Entry")
     print("  4] Delete Entry")
-    print("  5] About")
-    print("  6] Exit")
+    print("  5] Password Generator", '\n')
+    print("  6] About")
+    print("  7] Exit")
     print()
     while True:
         ch = input(">> ").strip().lower()
@@ -176,9 +221,11 @@ def menu_showMain():
             return menu_showEdit()
         elif ch in {'4', 'delete', 'd', 'del'}:
             return menu_showDelete()
-        elif ch in {'5', 'about', 'info', 'i'}:
+        elif ch in {'5', 'generator', 'p', 'pwd'}:
+            return menu_showGenerator()
+        elif ch in {'6', 'about', 'info', 'i'}:
             return menu_showAbout()
-        elif ch in {'6', 'exit', 'quit', 'q'}:
+        elif ch in {'7', 'exit', 'quit', 'q'}:
             print("Exiting...")
             return safeExit()
         else:
@@ -248,6 +295,8 @@ def menu_showAdd():
         "Enter Password (Confirmation): ",
         "{ERROR} Password Mismatch. Enter Again.\n"
     )
+    if entry_password == 'clip':
+        entry_password = pyperclip.paste().strip() or entry_password
     entry_notes = input("Additional Notes: ")
     last_modified = str(time.time())
     
@@ -313,6 +362,8 @@ def menu_showEdit():
                         break
                     else:
                         print("{ERROR} Password Mismatch. Enter Again.\n")
+                if new_password == 'clip':
+                    new_password = pyperclip.paste().strip() or new_password
                 
                 print("\nNotes:", entry_data[4])
                 new_notes = input("Notes (New):").strip()
@@ -385,6 +436,70 @@ def menu_showDelete():
     pause("\n  << Back [press any key]")
     menu_showMain()
 
+def menu_showGenerator():
+    cls()
+    title("Pazz ^| Password Generator")
+    print()
+    print(r"  ╔═╗╔═╗╔═╗╔═╗╦ ╦╔═╗╦═╗╔╦╗  ╔═╗╔═╗╔╗╔╔═╗╦═╗╔═╗╔╦╗╔═╗╦═╗")
+    print(r"  ╠═╝╠═╣╚═╗╚═╗║║║║ ║╠╦╝ ║║  ║ ╦║╣ ║║║║╣ ╠╦╝╠═╣ ║ ║ ║╠╦╝")
+    print(r"  ╩  ╩ ╩╚═╝╚═╝╚╩╝╚═╝╩╚══╩╝  ╚═╝╚═╝╝╚╝╚═╝╩╚═╩ ╩ ╩ ╚═╝╩╚═")
+    print(r"  ─────────────────────────────────────────────────────")
+    print()
+    
+    print("  1] Random String Method")
+    print("  2] XKCD (Passphrase) Method")
+    print("  3] Pseudoword Method")
+    print("  4] Pseudoword + Passphrase Method", '\n')
+    print("  5] Back")
+    print()
+    while True:
+        ch = input(">> ").strip().lower()
+        
+        if ch in {'1', 'rs', 'random'}:
+            # random string method
+            length_s = input_integer("Enter String Length (10 Recommended): ", "{ERROR} Input a valid integer between 4-1024.\n", (4, 1024), 10)
+            
+            pwd = genpwd_RSM(length_s)
+            pyperclip.copy(pwd)
+            print("Generated random string password has been copied to clipboard.")
+            break
+            
+        elif ch in {'2', 'xkcd', 'passphrase', 'pp'}:
+            # passphrase
+            length_pp = input_integer("Enter Passphrase Length (4 Recommended): ", "{ERROR} Input a valid integer between 4-256.\n", (4, 256), 4)
+            
+            pwd = genpwd_PP(length_pp)
+            pyperclip.copy(pwd)
+            print("Generated passphrase has been copied to clipboard.")
+            break
+            
+        elif ch in {'3', 'pseudoword', 'pswd', 'gpw', 'pw'}:
+            # pseudoword
+            length_pw = input_integer("Enter Pseudoword Length (8 Recommended): ", "{ERROR} Input a valid integer between 4-32.\n", (4, 32), 8)
+            
+            pwd = genpwd_GPW(length_pw)
+            pyperclip.copy(pwd)
+            print("Generated pseudoword password has been copied to clipboard.")
+            break
+            
+        elif ch in {'4', 'pseudoword+passphrase', 'pswdxkcd', 'pwpp'}:
+            # pseudoword + passphrase
+            length_pw = input_integer("Enter Pseudoword Length (6 Recommended): ", "{ERROR} Input a valid integer between 4-32.\n", (4, 32), 6)
+            length_pp = input_integer("Enter Passphrase Length (4 Recommended): ", "{ERROR} Input a valid integer between 4-256.\n", (4, 256), 4)
+            
+            pwd = ' '.join([genpwd_GPW(length_pw) for i in range(length_pp)])
+            pyperclip.copy(pwd)
+            print("Generated pseudoword passphrase has been copied to clipboard.")
+            break
+            
+        elif ch in {'5', 'back', 'b'}:
+            return menu_showMain()
+        else:
+            print("{ERROR} Invalid Option. Try Again. [1/2/3/4/5]\n")
+    
+    pause("\n << Back [press any key]")
+    menu_showMain()
+
 def menu_showAbout():
     cls()
     title("Pazz ^| About")
@@ -395,7 +510,7 @@ def menu_showAbout():
     print(r"  ───────────────")
     print()
     
-    print("  Pazz ^| by waterrmalann")
+    print("  Pazz | by waterrmalann")
     print("  A simple cli-based password manager written in Python using SQLite.")
     print("  Version 1.0 (2022)")
     print()
